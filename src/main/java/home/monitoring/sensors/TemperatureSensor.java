@@ -25,7 +25,7 @@ public class TemperatureSensor extends Sensor<Double> {
         Random random = new Random();
 
         if (shouldGenerateAnomaly() && !anomalyDetected) {
-            // Генерация аномального значения, если оно еще не было сгенерировано
+            // Генерация аномального значения
             anomalyValue = getNormalValue() + getThreshold() + 50;
             setCurrentValue(anomalyValue);
             setAnomalous(true);
@@ -49,8 +49,7 @@ public class TemperatureSensor extends Sensor<Double> {
 
     @Override
     public String toString() {
-        Double currentValue = getCurrentValue();
-        int naturalNumber = currentValue.intValue();
-        return getType() +": "+ (isDisabled() ? "датчик отключен" : naturalNumber +"℃");
+        String formattedValue = df.format(getCurrentValue());
+        return getType() +": "+ (isDisabled() ? "датчик отключен" : formattedValue +"℃  " + getFormattedLastUpdateTime());
     }
 }

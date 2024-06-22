@@ -46,4 +46,10 @@ public class PressureSensor extends Sensor<Double> {
     public boolean checkAnomaly() {
         return Math.abs(getCurrentValue() - getNormalValue()) > getThreshold();
     }
+
+    @Override
+    public String toString() {
+        String formattedValue = df.format(getCurrentValue());
+        return getType() +": "+ (isDisabled() ? "датчик отключен" : formattedValue +"bar  " + getFormattedLastUpdateTime());
+    }
 }

@@ -1,7 +1,7 @@
 package home.monitoring.ui;
 
 import home.monitoring.sensors.Sensor;
-import home.monitoring.systems.EngineeringSystem;
+import home.monitoring.systems.HomeEngineeringSystem;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -9,12 +9,11 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.TreePath;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 public class MonitoringUI {
     private JFrame frame;
@@ -22,9 +21,9 @@ public class MonitoringUI {
     private DefaultTreeModel treeModel;
     private JTextArea logArea;
 
-    private List<EngineeringSystem> systems = new ArrayList<>();
+    private List<HomeEngineeringSystem> systems = new ArrayList<>();
 
-    public void addSystem(EngineeringSystem system) {
+    public void addSystem(HomeEngineeringSystem system) {
         systems.add(system);
     }
 
@@ -48,7 +47,7 @@ public class MonitoringUI {
         JScrollPane logScrollPane = new JScrollPane(logArea);
 
         JButton refreshButton = new JButton("Получить данные");
-        refreshButton.addActionListener(e -> updateSystemData());
+        refreshButton.addActionListener(e -> updateAllSystemData());
 
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(refreshButton, BorderLayout.NORTH);
@@ -60,13 +59,24 @@ public class MonitoringUI {
 
         frame.setVisible(true);
 
-        systems.forEach(this::addSystemToTree);
+        // добавление систем в дерево
+        systems.forEach(system -> addSystemToTree(system));
+
+        // слушатель для закрытия окна
+        frame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                closeLogFiles();
+                super.windowClosing(e);
+            }
+        });
+
 
 //        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 //        executor.scheduleAtFixedRate(this::updateSystemData, 0, 4, TimeUnit.SECONDS);
     }
 
-    private void addSystemToTree(EngineeringSystem system) {
+    private void addSystemToTree(HomeEngineeringSystem system) {
         DefaultMutableTreeNode systemNode = new DefaultMutableTreeNode(system.getName());
         for (Sensor<?> sensor : system.getSensors()) {
             DefaultMutableTreeNode sensorNode = new DefaultMutableTreeNode(sensor);
@@ -78,9 +88,9 @@ public class MonitoringUI {
         expandAllNodes(tree, 0, tree.getRowCount());
     }
 
-    private void updateSystemData() {
+    private void updateAllSystemData() {
         TreePath[] expandedPaths = getExpandedPaths(tree);
-        systems.forEach(this::updateSystemData);
+        systems.forEach(system -> this.updateSystemData(system));
         SwingUtilities.invokeLater(() -> {
             treeModel.reload();
             restoreExpandedPaths(tree, expandedPaths);
@@ -103,8 +113,9 @@ public class MonitoringUI {
         }
     }
 
-    private void updateSystemData(EngineeringSystem system) {
+    public void updateSystemData(HomeEngineeringSystem system) {
         system.generateData();
+        system.getSensors().forEach(sensor -> system.writeToTempLogFile(sensor.toString()));
         DefaultMutableTreeNode root = (DefaultMutableTreeNode) treeModel.getRoot();
         Enumeration<?> enumeration = root.breadthFirstEnumeration();
         while (enumeration.hasMoreElements()) {
@@ -114,33 +125,39 @@ public class MonitoringUI {
                     DefaultMutableTreeNode childNode = (DefaultMutableTreeNode) node.getChildAt(i);
                     Sensor<?> sensor = system.getSensors().get(i);
                     childNode.setUserObject(sensor);
-                    if (sensor.isAnomalous()) {
-                        logAnomaly(system, sensor);
-                        notifyUser(system, sensor, true); // Уведомление об аномалии
-                    }
+
                     if (sensor.isDisabled()) {
                         logDisabledSensor(system, sensor);
                         notifyUser(system, sensor, false); // Уведомление об отключении
-
+                    } else {
+                        if (sensor.isAnomalous()) {
+                            logAnomaly(system, sensor);
+                            notifyUser(system, sensor, true); // Уведомление об аномалии
+                        }
                     }
                 }
             }
         }
     }
 
-    private void logAnomaly(EngineeringSystem system, Sensor<?> sensor) {
+    private void logAnomaly(HomeEngineeringSystem system, Sensor<?> sensor) {
+        if (sensor.isDisabled()) {
+            return;
+        }
+        system.writeToLogFile(5);
         SwingUtilities.invokeLater(() -> {
             logArea.append("В системе '" + system.getName() + "' произошла аномалия в датчике '" + sensor.getType() + "'  " + sensor.getFormattedLastUpdateTime() + "'\n");
         });
     }
 
-    private void logDisabledSensor(EngineeringSystem system, Sensor<?> sensor) {
+    private void logDisabledSensor(HomeEngineeringSystem system, Sensor<?> sensor) {
+        system.writeToLogFile(5);
         SwingUtilities.invokeLater(() -> {
             logArea.append("В системе '" + system.getName() + "' произошло отключение датчика '" + sensor.getType() + "'  " + sensor.getFormattedLastUpdateTime() + "\n");
         });
     }
 
-    private void notifyUser(EngineeringSystem system, Sensor<?> sensor, boolean isAnomaly) {
+    private void notifyUser(HomeEngineeringSystem system, Sensor<?> sensor, boolean isAnomaly) {
         String message = isAnomaly ? "аномалия" : "отключение";
         SwingUtilities.invokeLater(() -> {
             JOptionPane.showMessageDialog(frame, "В системе '" + system.getName() + "' произошла " + message + " в датчике '" + sensor.getType() + "'", "Обнаружена " + message, JOptionPane.WARNING_MESSAGE);
@@ -157,6 +174,13 @@ public class MonitoringUI {
         }
     }
 
+    private void closeLogFiles() {
+        for (HomeEngineeringSystem system : systems) {
+            system.closeLogFile();
+        }
+    }
+
+    // при вызове метода treeModel.reload() ререндериться
     private static class SensorTreeCellRenderer extends DefaultTreeCellRenderer {
         @Override
         public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded,

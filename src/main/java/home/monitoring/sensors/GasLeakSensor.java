@@ -36,11 +36,11 @@ public class GasLeakSensor extends Sensor<Boolean> {
     @Override
     public String toString() {
         if (isDisabled()) {
-            return getType() + ": датчик отключен";
+            return getType() + ": датчик отключен  " + getFormattedLastUpdateTime();
         } else if (getCurrentValue()) {
-            return getType() + ": обнаружена утечка газа!";
+            return getType() + ": обнаружена утечка газа!  " + getFormattedLastUpdateTime();
         } else {
-            return getType() + ": норма";
+            return getType() + ": норма  "  + getFormattedLastUpdateTime();
         }
     }
 }
