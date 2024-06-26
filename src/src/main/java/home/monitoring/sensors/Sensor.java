@@ -11,12 +11,12 @@ public abstract class Sensor<T> {
     private T normalValue;
     private T threshold;
 
-    private LocalDateTime lastUpdateTime;
     private boolean isThresholdExceeded;
     private boolean isDeviceOff;
     private double anomalyProbability = 0.05; // начальная вероятность 5%
     private double disableProbability = 0.05; // 5% вероятность отключения
 
+    private LocalDateTime lastUpdateTime;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
     DecimalFormat df = new DecimalFormat("0.0");
 
@@ -43,6 +43,8 @@ public abstract class Sensor<T> {
 
     public abstract boolean checkThreshold();
 
+    public abstract String outputStatus();
+
 
     protected boolean shouldGenerateAnomaly() {
         Random random = new Random();
@@ -57,6 +59,7 @@ public abstract class Sensor<T> {
     public String getFormattedLastUpdateTime() {
         return lastUpdateTime.format(dateFormatter);
     }
+
 
     @Override
     public String toString() {

@@ -2,12 +2,12 @@ package home.monitoring.sensors;
 
 import java.util.Random;
 
-public class NoiseSensor extends Sensor<Double>{
-    private boolean anomalyDetected = false;
+public class NoiseSensor extends Sensor<Double> {
+    private boolean isThresholdExceeded = false;
     private double anomalyValue;
 
     public NoiseSensor(double normalValue, double threshold) {
-        super("Энергопотребление", normalValue, threshold);
+        super("Шум", normalValue, threshold);
     }
 
     @Override
@@ -23,13 +23,13 @@ public class NoiseSensor extends Sensor<Double>{
 
         Random random = new Random();
 
-        if (shouldGenerateAnomaly() && !anomalyDetected) {
+        if (shouldGenerateAnomaly() && !isThresholdExceeded) {
             // Генерация аномального значения
             anomalyValue = getNormalValue() + getThreshold() + 45;
             setCurrentValue(anomalyValue);
             setThresholdExceeded(true);
-            anomalyDetected = true;
-        } else if (anomalyDetected) {
+            isThresholdExceeded = true;
+        } else if (isThresholdExceeded) {
             // Поддержка аномального значения
             setCurrentValue(anomalyValue + (random.nextDouble() - 0.5) * getThreshold());
         } else {
@@ -47,8 +47,16 @@ public class NoiseSensor extends Sensor<Double>{
     }
 
     @Override
+    public String outputStatus() {
+        if (isDeviceOff()) {
+            return "датчик отключен";
+        }
+        return df.format(getCurrentValue()) + " дБ";
+    }
+
+    @Override
     public String toString() {
         String formattedValue = df.format(getCurrentValue());
-        return getType() +": "+ (isDeviceOff() ? "датчик отключен  " + getFormattedLastUpdateTime() : formattedValue +"дБ  " + getFormattedLastUpdateTime());
+        return getType() + ": " + (isDeviceOff() ? "датчик отключен  " + getFormattedLastUpdateTime() : formattedValue + " дБ  " + getFormattedLastUpdateTime());
     }
 }

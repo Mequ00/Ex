@@ -1,8 +1,14 @@
 package home.monitoring.systems;
 
 import home.monitoring.sensors.Sensor;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -139,6 +145,33 @@ public class HomeEngineeringSystem {
         }));
     }
 
+    public void saveReportToExcel(String filePath) {
+        String timestamp = LocalDateTime.now().format(dateFormatter);
+        filePath += "_" + timestamp + ".xlsx";
+
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Отчет" + getName() + LocalDateTime.now().format(dateFormatter)+ ".xlsx");
+
+        int rowNum = 0;
+        Row headerRow = sheet.createRow(rowNum++);
+        headerRow.createCell(0).setCellValue("Тип датчика");
+        headerRow.createCell(1).setCellValue("Значение");
+        headerRow.createCell(2).setCellValue("Время");
+
+        for (Sensor<?> sensor : sensors) {
+            Row row = sheet.createRow(rowNum++);
+            row.createCell(0).setCellValue(sensor.getType());
+            row.createCell(1).setCellValue(sensor.outputStatus());
+            row.createCell(2).setCellValue(sensor.getFormattedLastUpdateTime());
+        }
+
+        try (FileOutputStream fileOut = new FileOutputStream(filePath)) {
+            workbook.write(fileOut);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public Path getTempLogFile() {
         return tempLogFile;
     }
@@ -162,5 +195,10 @@ public class HomeEngineeringSystem {
 
     public void setAnyAnomalyDetected(boolean anyAnomalyDetected) {
         isAnyAnomalyDetected = anyAnomalyDetected;
+    }
+
+    @Override
+    public String toString() {
+        return name;
     }
 }

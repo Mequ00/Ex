@@ -9,8 +9,11 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.TreePath;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -49,9 +52,11 @@ public class MonitoringUI {
         JButton refreshButton = new JButton("Получить данные");
         refreshButton.addActionListener(e -> updateAllSystemData());
 
+
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(refreshButton, BorderLayout.NORTH);
         panel.add(logScrollPane, BorderLayout.CENTER);
+
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, treeScrollPane, panel);
         splitPane.setDividerLocation(300);
@@ -62,13 +67,28 @@ public class MonitoringUI {
         // добавление систем в дерево
         systems.forEach(system -> addSystemToTree(system));
 
+        tree.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (SwingUtilities.isRightMouseButton(e)) {
+                    int row = tree.getClosestRowForLocation(e.getX(), e.getY());
+                    tree.setSelectionRow(row);
+                    TreePath path = tree.getPathForRow(row);
+                    DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) path.getLastPathComponent();
+                    if (selectedNode.getUserObject() instanceof HomeEngineeringSystem) {
+                        showContextMenu(e.getX(), e.getY(), (HomeEngineeringSystem) selectedNode.getUserObject());
+                    }
+                }
+            }
+        });
+
 
 //        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
 //        executor.scheduleAtFixedRate(this::updateSystemData, 0, 4, TimeUnit.SECONDS);
     }
 
     private void addSystemToTree(HomeEngineeringSystem system) {
-        DefaultMutableTreeNode systemNode = new DefaultMutableTreeNode(system.getName());
+        DefaultMutableTreeNode systemNode = new DefaultMutableTreeNode(system);
         for (Sensor<?> sensor : system.getSensors()) {
             DefaultMutableTreeNode sensorNode = new DefaultMutableTreeNode(sensor);
             systemNode.add(sensorNode);
@@ -81,8 +101,9 @@ public class MonitoringUI {
 
     private void updateAllSystemData() {
         TreePath[] expandedPaths = getExpandedPaths(tree);
+//        System.out.println(systems);
         systems.forEach(system -> this.updateSystemData(system));
-        systems.forEach(system ->system.checkAnyAnomaly());
+        systems.forEach(system -> system.checkAnyAnomaly());
         SwingUtilities.invokeLater(() -> {
             treeModel.reload();
             restoreExpandedPaths(tree, expandedPaths);
@@ -112,25 +133,29 @@ public class MonitoringUI {
         Enumeration<?> enumeration = root.breadthFirstEnumeration();
         while (enumeration.hasMoreElements()) {
             DefaultMutableTreeNode node = (DefaultMutableTreeNode) enumeration.nextElement();
-            if (node.getUserObject().equals(system.getName())) {
-                for (int i = 0; i < node.getChildCount(); i++) {
-                    DefaultMutableTreeNode childNode = (DefaultMutableTreeNode) node.getChildAt(i);
-                    Sensor<?> sensor = system.getSensors().get(i);
-                    childNode.setUserObject(sensor);
+            if (node.getUserObject() instanceof HomeEngineeringSystem) {
+                HomeEngineeringSystem currentSystem = (HomeEngineeringSystem) node.getUserObject();
+                if (currentSystem.equals(system)) {
+                    for (int i = 0; i < node.getChildCount(); i++) {
+                        DefaultMutableTreeNode childNode = (DefaultMutableTreeNode) node.getChildAt(i);
+                        Sensor<?> sensor = system.getSensors().get(i);
+                        childNode.setUserObject(sensor);
 
-                    if (sensor.isDeviceOff()) {
-                        logDisabledSensor(system, sensor);
-                        notifyUser(system, sensor, false); // Уведомление об отключении
-                    } else {
-                        if (sensor.isThresholdExceeded()) {
-                            logAnomaly(system, sensor);
-                            notifyUser(system, sensor, true); // Уведомление об аномалии
+                        if (sensor.isDeviceOff()) {
+                            logDisabledSensor(system, sensor);
+                            notifyUser(system, sensor, false); // Уведомление об отключении
+                        } else {
+                            if (sensor.isThresholdExceeded()) {
+                                logAnomaly(system, sensor);
+                                notifyUser(system, sensor, true); // Уведомление об аномалии
+                            }
                         }
                     }
                 }
             }
         }
     }
+
 
     private void logAnomaly(HomeEngineeringSystem system, Sensor<?> sensor) {
         if (sensor.isDeviceOff()) {
@@ -150,7 +175,7 @@ public class MonitoringUI {
     private void notifyUser(HomeEngineeringSystem system, Sensor<?> sensor, boolean isAnomaly) {
         String message = isAnomaly ? "произошла аномалия" : "произошло отключение";
         SwingUtilities.invokeLater(() -> {
-            JOptionPane.showMessageDialog(frame, "В системе '" + system.getName()+"' "  + message + " в датчике '" + sensor.getType() + "'", "Обнаружена " + message, JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(frame, "В системе '" + system.getName() + "' " + message + " в датчике '" + sensor.getType() + "'", "Обнаружена " + message, JOptionPane.WARNING_MESSAGE);
         });
     }
 
@@ -163,6 +188,26 @@ public class MonitoringUI {
             expandAllNodes(tree, rowCount, tree.getRowCount());
         }
     }
+
+    private void showContextMenu(int x, int y, HomeEngineeringSystem system) {
+        JPopupMenu contextMenu = new JPopupMenu();
+        JMenuItem generateReportItem = new JMenuItem("Сгенерировать отчет");
+        generateReportItem.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setDialogTitle("Сохранить отчет как");
+            fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            int userSelection = fileChooser.showSaveDialog(frame);
+            if (userSelection == JFileChooser.APPROVE_OPTION) {
+                File directoryToSave = fileChooser.getSelectedFile();
+                String filePath = directoryToSave.getAbsolutePath() + File.separator + system.getName() + "Отчет";
+                system.saveReportToExcel(filePath);
+                JOptionPane.showMessageDialog(frame, "Отчет сохранен в " + filePath, "Отчет сохранен", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+        contextMenu.add(generateReportItem);
+        contextMenu.show(tree, x, y);
+    }
+
 
     // при вызове метода treeModel.reload() ререндериться
     private static class SensorTreeCellRenderer extends DefaultTreeCellRenderer {

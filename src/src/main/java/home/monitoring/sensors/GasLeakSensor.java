@@ -1,7 +1,7 @@
 package home.monitoring.sensors;
 
 public class GasLeakSensor extends Sensor<Boolean> {
-    private boolean anomalyDetected = false;
+    private boolean isThresholdExceeded = false;
 
     public GasLeakSensor() {
         super("Газоанализатор", false, true);
@@ -18,11 +18,11 @@ public class GasLeakSensor extends Sensor<Boolean> {
             return;
         }
 
-        if (shouldGenerateAnomaly() && !anomalyDetected) {
+        if (shouldGenerateAnomaly() && !isThresholdExceeded) {
             setCurrentValue(true);
             setThresholdExceeded(true);
-            anomalyDetected = true;
-        } else if (!anomalyDetected) {
+            isThresholdExceeded = true;
+        } else if (!isThresholdExceeded) {
             setCurrentValue(false);
             setThresholdExceeded(false);
         }
@@ -34,13 +34,18 @@ public class GasLeakSensor extends Sensor<Boolean> {
     }
 
     @Override
-    public String toString() {
+    public String outputStatus() {
         if (isDeviceOff()) {
-            return getType() + ": датчик отключен  " + getFormattedLastUpdateTime();
+            return "датчик отключен";
         } else if (getCurrentValue()) {
-            return getType() + ": обнаружена утечка газа!  " + getFormattedLastUpdateTime();
+            return "обнаружена утечка газа!";
         } else {
-            return getType() + ": норма  "  + getFormattedLastUpdateTime();
+            return "норма";
         }
+    }
+
+    @Override
+    public String toString() {
+        return getType() + ": " + outputStatus() + " " + getFormattedLastUpdateTime();
     }
 }

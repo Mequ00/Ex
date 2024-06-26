@@ -48,8 +48,16 @@ public class PressureSensor extends Sensor<Double> {
     }
 
     @Override
+    public String outputStatus() {
+        if (isDeviceOff()) {
+            return "датчик отключен";
+        }
+        return df.format(getCurrentValue()) + " бар";
+    }
+
+    @Override
     public String toString() {
         String formattedValue = df.format(getCurrentValue());
-        return getType() +": "+ (isDeviceOff() ? "датчик отключен  "  + getFormattedLastUpdateTime() : formattedValue +"бар  " + getFormattedLastUpdateTime());
+        return getType() + ": " + (isDeviceOff() ? "датчик отключен  " + getFormattedLastUpdateTime() : formattedValue + " бар  " + getFormattedLastUpdateTime());
     }
 }
