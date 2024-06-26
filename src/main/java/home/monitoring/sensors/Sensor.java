@@ -10,22 +10,22 @@ public abstract class Sensor<T> {
     private T currentValue;
     private T normalValue;
     private T threshold;
-
-    private LocalDateTime lastUpdateTime;
-    private boolean isAnomalous;
+    //
+    private boolean isThresholdExceeded;
+    private boolean isDeviceOff;
     private double anomalyProbability = 0.05; // начальная вероятность 5%
-    private boolean isDisabled;
     private double disableProbability = 0.05; // 5% вероятность отключения
 
+    private LocalDateTime lastUpdateTime;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
-    DecimalFormat df = new DecimalFormat("#.0");
+    DecimalFormat df = new DecimalFormat("0.0");
 
     public Sensor(String type, T normalValue, T threshold) {
         this.type = type;
         this.normalValue = normalValue;
         this.threshold = threshold;
-        this.isAnomalous = false;
-        this.isDisabled = false;
+        this.isThresholdExceeded = false;
+        this.isDeviceOff = false;
         this.currentValue = normalValue;
         this.lastUpdateTime = LocalDateTime.now();
     }
@@ -34,18 +34,39 @@ public abstract class Sensor<T> {
         this.anomalyProbability += increment;
     }
 
-    public void disableSensor() {
-        this.isDisabled = true;
+    public abstract T generateAnomalyValue();
+
+    public abstract T generateNormalValue(Random random);
+
+    public void generateData() {
+        if (isDeviceOff()) {
+            return;
+        }
+
+        if (shouldDisableSensor()) {
+            setDeviceOff(true);
+            return;
+        }
+
+        Random random = new Random();
+
+        if (shouldGenerateAnomaly() && !isThresholdExceeded) {
+            // Генерация аномального значения
+            T anomalyValue = generateAnomalyValue();
+            setCurrentValue(anomalyValue);
+            setThresholdExceeded(true);
+            isThresholdExceeded = true;
+        } else if (isThresholdExceeded) {
+            // Поддержка аномального значения
+            T anomalyValue = generateAnomalyValue();
+            setCurrentValue(anomalyValue);
+        } else {
+            // Генерация нормального значения
+            T generatedValue = generateNormalValue(random);
+            setCurrentValue(generatedValue);
+            setThresholdExceeded(checkThreshold());
+        }
     }
-
-    public void enableSensor() {
-        this.isDisabled = false;
-    }
-
-    public abstract void generateData();
-
-    public abstract boolean checkAnomaly();
-
 
     protected boolean shouldGenerateAnomaly() {
         Random random = new Random();
@@ -63,12 +84,12 @@ public abstract class Sensor<T> {
 
     @Override
     public String toString() {
-        return type + " (Текущее значение: " + (isDisabled ? "Отключен" : currentValue.toString()) + ")";
+        return type + " (Текущее значение: " + (isDeviceOff ? "Отключен" : currentValue.toString()) + ")";
     }
 
-    public String getType() {
-        return type;
-    }
+    public abstract boolean checkThreshold();
+
+    public abstract String outputStatus();
 
     public T getCurrentValue() {
         return currentValue;
@@ -76,7 +97,6 @@ public abstract class Sensor<T> {
 
     public void setCurrentValue(T currentValue) {
         this.currentValue = currentValue;
-        this.lastUpdateTime = LocalDateTime.now();
     }
 
     public T getNormalValue() {
@@ -87,27 +107,26 @@ public abstract class Sensor<T> {
         return threshold;
     }
 
-
-
-    public boolean isAnomalous() {
-        return isAnomalous;
+    public boolean isDeviceOff() {
+        return isDeviceOff;
     }
 
-    public void setAnomalous(boolean anomalous) {
-        isAnomalous = anomalous;
+    public void setDeviceOff(boolean isDeviceOff) {
+        this.isDeviceOff = isDeviceOff;
     }
 
-
-    public boolean isDisabled() {
-        return isDisabled;
+    public void setThresholdExceeded(boolean isThresholdExceeded) {
+        this.isThresholdExceeded = isThresholdExceeded;
     }
 
-    public void setDisabled(boolean disabled) {
-        isDisabled = disabled;
+    public boolean isThresholdExceeded() {
+        return isThresholdExceeded;
     }
 
-    public double getAnomalyProbability() {
-        return anomalyProbability;
+    public String getType() {
+        return type;
     }
-
+    public void enableSensor() {
+        this.isDeviceOff = false;
+    }
 }

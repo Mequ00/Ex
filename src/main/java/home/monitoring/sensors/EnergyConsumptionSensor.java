@@ -2,15 +2,15 @@ package home.monitoring.sensors;
 
 import java.util.Random;
 
-public class PressureSensor extends Sensor<Double> {
+public class EnergyConsumptionSensor extends Sensor<Double> {
 
-    public PressureSensor(double normalValue, double threshold) {
-        super("Давление", normalValue, threshold);
+    public EnergyConsumptionSensor(double normalValue, double threshold) {
+        super("Энергопотребление", normalValue, threshold);
     }
 
     @Override
     public Double generateAnomalyValue() {
-        return getNormalValue() + getThreshold() * 1.2;
+        return getNormalValue() + getThreshold() * 2;
     }
 
     @Override
@@ -29,12 +29,12 @@ public class PressureSensor extends Sensor<Double> {
         if (isDeviceOff()) {
             return "датчик отключен";
         }
-        return df.format(getCurrentValue()) + " Па";
+        return df.format(getCurrentValue()) + " кВт";
     }
 
     @Override
     public String toString() {
         String formattedValue = df.format(getCurrentValue());
-        return getType() + ": " + (isDeviceOff() ? "датчик отключен  " + getFormattedLastUpdateTime() : formattedValue + " Па  " + getFormattedLastUpdateTime());
+        return getType() + ": " + (isDeviceOff() ? "датчик отключен  " + getFormattedLastUpdateTime() : formattedValue + " кВт  " + getFormattedLastUpdateTime());
     }
 }

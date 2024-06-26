@@ -2,15 +2,15 @@ package home.monitoring.sensors;
 
 import java.util.Random;
 
-public class PressureSensor extends Sensor<Double> {
+public class VibrationSensor extends Sensor<Double> {
 
-    public PressureSensor(double normalValue, double threshold) {
-        super("Давление", normalValue, threshold);
+    public VibrationSensor(double normalValue, double threshold) {
+        super("Вибрация", normalValue, threshold);
     }
 
     @Override
     public Double generateAnomalyValue() {
-        return getNormalValue() + getThreshold() * 1.2;
+        return getNormalValue() + getThreshold() * 1.8;
     }
 
     @Override
@@ -29,12 +29,12 @@ public class PressureSensor extends Sensor<Double> {
         if (isDeviceOff()) {
             return "датчик отключен";
         }
-        return df.format(getCurrentValue()) + " Па";
+        return df.format(getCurrentValue()) + " мм/с";
     }
 
     @Override
     public String toString() {
         String formattedValue = df.format(getCurrentValue());
-        return getType() + ": " + (isDeviceOff() ? "датчик отключен  " + getFormattedLastUpdateTime() : formattedValue + " Па  " + getFormattedLastUpdateTime());
+        return getType() + ": " + (isDeviceOff() ? "датчик отключен  " + getFormattedLastUpdateTime() : formattedValue + " мм/с  " + getFormattedLastUpdateTime());
     }
 }
