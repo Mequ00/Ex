@@ -131,7 +131,7 @@ public class MonitoringUI {
 
     public void updateSystemData(HomeEngineeringSystem system) {
         system.generateData();
-        system.getSensors().forEach(sensor -> system.writeToTempLogFile(sensor.toString()));
+        system.getSensors().forEach(sensor -> system.writeToTempLog(sensor.toString()));
         DefaultMutableTreeNode root = (DefaultMutableTreeNode) treeModel.getRoot();
         Enumeration<?> enumeration = root.breadthFirstEnumeration();
         while (enumeration.hasMoreElements()) {
