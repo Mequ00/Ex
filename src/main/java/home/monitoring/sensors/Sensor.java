@@ -13,9 +13,8 @@ public abstract class Sensor<T> {
     //
     private boolean isThresholdExceeded;
     private boolean isDeviceOff;
-
     private double anomalyProbability = 0.05; // начальная вероятность 5%
-    private double disableProbability = 0.05; // вероятность отключения 5%
+    private double disableProbability = 0.05; // 5% вероятность отключения
 
     private LocalDateTime lastUpdateTime;
     private DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
@@ -35,20 +34,22 @@ public abstract class Sensor<T> {
         this.anomalyProbability += increment;
     }
 
-
-    public abstract boolean checkThreshold();
     public abstract T generateAnomalyValue();
+
     public abstract T generateNormalValue(Random random);
 
     public void generateData() {
         if (isDeviceOff()) {
             return;
         }
+
         if (shouldDisableSensor()) {
             setDeviceOff(true);
             return;
         }
+
         Random random = new Random();
+
         if (shouldGenerateAnomaly() && !isThresholdExceeded) {
             // Генерация аномального значения
             T anomalyValue = generateAnomalyValue();
@@ -86,7 +87,7 @@ public abstract class Sensor<T> {
         return type + " (Текущее значение: " + (isDeviceOff ? "Отключен" : currentValue.toString()) + ")";
     }
 
-
+    public abstract boolean checkThreshold();
 
     public abstract String outputStatus();
 
