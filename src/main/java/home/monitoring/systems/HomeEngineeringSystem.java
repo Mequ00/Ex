@@ -7,7 +7,6 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -20,18 +19,16 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class HomeEngineeringSystem {
     private String name;
     private List<Sensor<?>> sensors;
-    private BufferedWriter writer;
 
     private boolean thresholdExceededDetected;
 
     private boolean isAnyAnomalyDetected;
 
-    Deque<String> logEntries = new LinkedList<>();
+    private Deque<String> logEntries = new LinkedList<>();
 
 
     Path logsDir = Paths.get("src/main/resources/logs");
@@ -75,15 +72,12 @@ public class HomeEngineeringSystem {
         }
     }
 
-    public void writeToTempLogFile(String message) {
-
+    public void writeToTempLog(String message) {
             // Добавляем новую запись и ограничиваем размер до MAX_LOG_ENTRIES
             logEntries.addLast(message);
             if (logEntries.size() > MAX_LOG_ENTRIES) {
                 logEntries.removeFirst();
             }
-
-
     }
 
     public void writeToLogFile(int countMessages) {
